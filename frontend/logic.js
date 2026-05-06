@@ -1,4 +1,7 @@
-const EXCHANGE_RATE_RON_TO_EUR = 4.9770;
+// logic.js
+
+// Hardcoded exchange rate: 1 EUR = 5.27 RON
+const EUR_TO_RON_RATE = 5.27; 
 
 function standardizeModelName(rawName) {
     let name = rawName;
@@ -6,8 +9,9 @@ function standardizeModelName(rawName) {
     if (!/galaxy/i.test(name)) name = name.replace(/samsung/i, "Samsung Galaxy");
     
     return name.split(' ').map(word => {
-        if (word.toUpperCase() === "FE") return "FE";
-        if (word.toUpperCase() === "PLUS") return "Plus";
+        const up = word.toUpperCase();
+        if (up === "FE") return "FE";
+        if (up === "PLUS") return "Plus";
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     }).join(' ').replace(/\s+/g, ' ').trim();
 }
@@ -15,29 +19,35 @@ function standardizeModelName(rawName) {
 function processPhoneData(deloitteData, emagData, subsidyAmount) {
     return deloitteData.map(dPhone => {
         const cleanName = standardizeModelName(dPhone.Model);
-        
         const ePhone = emagData.find(e => e.Model === cleanName && e.Storage === dPhone.Storage);
-        const outOfPocket = Math.max(0, dPhone.Deloitte_Price - subsidyAmount);
         
-        // Convert eMAG price from RON to EUR
+        // 1. Calculate the total Deloitte price in RON
+        const deloittePriceRON = dPhone.Deloitte_Price * EUR_TO_RON_RATE;
+        
+        // 2. Calculate the subsidy in RON
+        const subsidyRON = subsidyAmount * EUR_TO_RON_RATE;
+        
+        // 3. Out-of-Pocket = Full Price - Subsidy (cannot be less than 0)
+        const outOfPocketRON = Math.max(0, deloittePriceRON - subsidyRON);
+        
         const emagPriceRON = ePhone ? ePhone.eMAG_Price : null;
-        const emagPriceEUR = emagPriceRON !== null ? parseFloat((emagPriceRON / EXCHANGE_RATE_RON_TO_EUR).toFixed(2)) : null;
         
-        const diff = emagPriceEUR !== null ? (emagPriceEUR - outOfPocket) : null;
+        let emagPriceEUR = null;
+        if (emagPriceRON !== null) {
+            emagPriceEUR = parseFloat((emagPriceRON / EUR_TO_RON_RATE).toFixed(2));
+        }
+        
+        const diff = emagPriceRON !== null ? (emagPriceRON - outOfPocketRON) : null;
 
         return {
             Model: cleanName,
             Storage: dPhone.Storage,
-            Deloitte_Price: dPhone.Deloitte_Price,
-            Out_of_Pocket: parseFloat(outOfPocket.toFixed(2)),
-            eMAG_Price: emagPriceEUR,
+            Deloitte_Price_RON: parseFloat(deloittePriceRON.toFixed(2)),
+            Out_of_Pocket_RON: parseFloat(outOfPocketRON.toFixed(2)), // This is what the graph needs
+            eMAG_Price_EUR: emagPriceEUR,
             eMAG_Price_RON: emagPriceRON,
             eMAG_Rating: ePhone ? ePhone.eMAG_Rating : null,
             Difference: diff !== null ? parseFloat(diff.toFixed(2)) : null
         };
     });
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { standardizeModelName, processPhoneData, EXCHANGE_RATE_RON_TO_EUR };
 }

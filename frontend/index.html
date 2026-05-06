@@ -1,98 +1,155 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deloitte Phone Subsidy vs eMAG</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Deloitte Phone Subsidy Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .subsidy-box { font-size: 1.3rem; text-align: center; margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px; color: #0056b3; border: 1px solid #b6d4fe; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: 600; }
+        tr:nth-child(even) { background-color: #fafafa; }
+        .chart-container { margin-top: 40px; position: relative; height: 400px; }
+        .controls { text-align: center; margin-top: 20px; }
+        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="logic.js"></script>
 </head>
 <body>
     <main class="container">
         <h1>📱 Deloitte Phone Subsidy Dashboard</h1>
-        <p><strong>Annual Subsidy:</strong> <span id="subsidy-amount">Loading...</span></p>
+        <div class="subsidy-box">
+            <strong id="subsidy-label">Annual Subsidy:</strong> <span id="subsidy-amount">Loading...</span>
+        </div>
 
         <figure>
-            <table role="grid" id="dataTable">
+            <table id="dataTable">
                 <thead>
                     <tr>
                         <th>Model</th>
                         <th>Storage</th>
-                        <th>Deloitte Price (EUR)</th>
-                        <th>Out of Pocket (EUR)</th>
+                        <th>Deloitte Price (RON)</th>
+                        <th>Your Cost (Out-of-Pocket RON)</th>
                         <th>eMAG Price (RON)</th>
                         <th>eMAG Price (EUR)</th>
                         <th>Rating</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- Populated by JavaScript -->
-                </tbody>
+                <tbody></tbody>
             </table>
         </figure>
 
-        <article>
+        <div class="chart-container">
             <canvas id="costChart"></canvas>
-        </article>
+        </div>
+
+        <div class="controls">
+            <button id="currencySwitch">Toggle Dashboard Currency (RON/EUR)</button>
+        </div>
     </main>
 
     <script>
+        let globalData; 
+        let myChart = null;
+        const RATE = 5.27;
+
+        function renderDashboard() {
+            // 1. UPDATE SUBSIDY AMOUNT AT TOP
+            const subsidyElement = document.getElementById('subsidy-amount');
+            if (globalData.currency === 'RON') {
+                subsidyElement.textContent = `${(globalData.subsidy * RATE).toFixed(2)} RON`;
+            } else {
+                subsidyElement.textContent = `€${globalData.subsidy.toFixed(2)}`;
+            }
+
+            // 2. PROCESS DATA
+            const processedData = processPhoneData(globalData.deloitteData, globalData.emagData, globalData.subsidy);
+            
+            // 3. RENDER TABLE
+            const tbody = document.querySelector('#dataTable tbody');
+            tbody.innerHTML = ''; 
+            processedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.Model}</td>
+                    <td>${row.Storage}</td>
+                    <td>${row.Deloitte_Price_RON} RON</td>
+                    <td><strong style="color: #d32f2f;">${row.Out_of_Pocket_RON} RON</strong></td>
+                    <td>${row.eMAG_Price_RON ? `${row.eMAG_Price_RON} RON` : 'N/A'}</td>
+                    <td>${row.eMAG_Price_EUR ? `€${row.eMAG_Price_EUR}` : 'N/A'}</td>
+                    <td>⭐ ${row.eMAG_Rating || 'N/A'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 4. RENDER CHART
+            const ctx = document.getElementById('costChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: getChartData(processedData, globalData.currency),
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: `Price Comparison: Your Actual Cost vs eMAG (${globalData.currency})` }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: `Amount in ${globalData.currency}` } }
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Fetch the external JSON data
                 const response = await fetch('data.json');
-                if (!response.ok) throw new Error('Failed to load data.json');
-                const data = await response.json();
+                if (!response.ok) throw new Error('data.json not found');
+                
+                globalData = await response.json();
+                if (!globalData.currency) globalData.currency = 'RON';
 
-                // Update UI with subsidy from JSON
-                document.getElementById('subsidy-amount').textContent = `€${data.subsidy.toFixed(2)}`;
-
-                // 1. Process Data
-                const processedData = processPhoneData(data.deloitteData, data.emagData, data.subsidy);
-
-                // 2. Render Table
-                const tbody = document.querySelector('#dataTable tbody');
-                processedData.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${row.Model}</td>
-                        <td>${row.Storage}</td>
-                        <td>€${row.Deloitte_Price}</td>
-                        <td><strong>€${row.Out_of_Pocket}</strong></td>
-                        <td>${row.eMAG_Price_RON ? `RON ${row.eMAG_Price_RON.toFixed(2)}` : 'N/A'}</td>
-                        <td>${row.eMAG_Price ? `€${row.eMAG_Price}` : 'N/A'}</td>
-                        <td>⭐ ${row.eMAG_Rating || 'N/A'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-                // 3. Render Chart
-                const ctx = document.getElementById('costChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: processedData.map(d => d.Model),
-                        datasets: [
-                            {
-                                label: 'Deloitte Out-of-Pocket (€)',
-                                data: processedData.map(d => d.Out_of_Pocket),
-                                backgroundColor: '#1E88E5'
-                            },
-                            {
-                                label: 'eMAG Retail Price (€)',
-                                data: processedData.map(d => d.eMAG_Price),
-                                backgroundColor: '#E53935'
-                            }
-                        ]
-                    },
-                    options: { responsive: true }
-                });
+                renderDashboard();
             } catch (error) {
-                console.error("Error loading data:", error);
-                document.getElementById('subsidy-amount').textContent = "Error loading data.json (Check CORS if running locally without a server)";
+                console.error("Error:", error);
+                document.getElementById('subsidy-amount').textContent = "Error loading data.json";
             }
         });
+
+        document.getElementById('currencySwitch').addEventListener('click', () => {
+            globalData.currency = globalData.currency === 'RON' ? 'EUR' : 'RON';
+            renderDashboard();
+        });
+
+        function getChartData(data, currency) {
+            return {
+                labels: data.map(d => d.Model),
+                datasets: [
+                    {
+                        label: `Your Cost (Out-of-Pocket ${currency})`,
+                        data: currency === 'RON' 
+                            ? data.map(d => d.Out_of_Pocket_RON) 
+                            : data.map(d => (d.Out_of_Pocket_RON / RATE).toFixed(2)),
+                        backgroundColor: '#1E88E5'
+                    },
+                    {
+                        label: `eMAG Price (${currency})`,
+                        data: currency === 'RON' 
+                            ? data.map(d => d.eMAG_Price_RON) 
+                            : data.map(d => d.eMAG_Price_EUR),
+                        backgroundColor: '#E53935'
+                    }
+                ]
+            };
+        }
     </script>
 </body>
 </html>
