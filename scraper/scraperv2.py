@@ -15,13 +15,12 @@ import asyncio
 import json
 import logging
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from playwright.async_api import Page, async_playwright
 
-from .scraper import (
+from scraper import (
     EmagCrawler,
     ProductInfo,
     SearchResult,
@@ -61,7 +60,6 @@ def _normalize_storage(text: str) -> str:
 # ── FilterCatalog ─────────────────────────────────────────────────────────────
 
 
-@dataclass
 class FilterCatalog:
     """
     Discovers and caches eMAG filter slugs for Samsung phones.
@@ -73,12 +71,15 @@ class FilterCatalog:
     }
     """
 
-    cache_path: Path = Path("emag_filters.json")
-    _data: dict = field(default_factory=lambda: {"models": {}, "storage": {}})
+    def __init__(self, cache_path: Path):
+        self.cache_path = cache_path
+        self._data = {"models": {}, "storage": {}}
+        self._load()
 
     # ── Persistence ───────────────────────────────────────────────────
 
-    def load(self) -> bool:
+    def _load(self) -> bool:
+        """Load filter catalog from disk cache."""
         if self.cache_path.exists():
             try:
                 self._data = json.loads(self.cache_path.read_text(encoding="utf-8"))
@@ -92,7 +93,12 @@ class FilterCatalog:
                 logger.warning("Could not load filter catalog: %s", e)
         return False
 
-    def save(self) -> None:
+    def load(self) -> bool:
+        """Public interface to load filter catalog from disk cache."""
+        return self._load()
+
+    def _save(self) -> None:
+        """Save filter catalog to disk cache."""
         self.cache_path.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -103,90 +109,113 @@ class FilterCatalog:
             len(self._data.get("storage", {})),
         )
 
+    def save(self) -> None:
+        """Public interface to save filter catalog to disk cache."""
+        return self._save()
+
     def is_empty(self) -> bool:
+        """Check if catalog has no models or storage options."""
         return not self._data.get("models") and not self._data.get("storage")
 
     # ── Discovery ─────────────────────────────────────────────────────
 
-    async def discover(self, page: Page) -> None:
+    async def discover(self, page):
         """
-        Navigate to the Samsung phones base search page and extract
-        every model + storage filter slug from the sidebar.
+        Populate the catalog by scraping the filter panel on eMAG's Samsung brand page.
+        Extracts all available models and storage options from the sidebar filters.
         """
-        base_url = (
-            "https://www.emag.ro/search/telefoane-mobile/brand/samsung/sort-priceasc/c"
-        )
-        logger.info("Discovering filter catalog from: %s", base_url)
+        # Navigate to the Samsung brand page (all models)
+        brand_url = "https://www.emag.ro/telefoane-mobile/brand/samsung/c"
+        await page.goto(brand_url, wait_until="domcontentloaded")
+        await asyncio.sleep(2)  # Give page extra time to settle
+        logger.info(f"Navigated to {brand_url}")
 
-        await page.goto(base_url, wait_until="domcontentloaded", timeout=60_000)
-        await asyncio.sleep(3)
-
-        # Dismiss cookie banner
-        for sel in ("button.js-accept", "#cookie-accept", "button[id*='cookie']"):
-            try:
-                if await page.is_visible(sel, timeout=1500):
-                    await page.click(sel)
-                    break
-            except Exception:
-                pass
-
-        # Expand any "Show more" buttons inside filter panels
-        show_more_selectors = [
-            ".js-show-more-refinements",
-            ".show-more-filters",
-            "[data-role='show-more']",
-            "a.show-more",
+        # Wait for the filter panel to load (try multiple selectors)
+        filter_panel_selectors = [
+            ".filters-column",
+            ".sidebar-filters",
+            "[class*='filter']",
         ]
-        for sel in show_more_selectors:
+        filter_panel_selector = None
+        for selector in filter_panel_selectors:
             try:
-                buttons = await page.query_selector_all(sel)
-                for btn in buttons:
-                    await btn.click()
-                    await asyncio.sleep(0.4)
-            except Exception:
-                pass
-
-        links = await page.query_selector_all("a[href*='/filter/']")
-        logger.info("  Raw filter links found: %d", len(links))
-
-        models: dict[str, str] = {}
-        storage: dict[str, str] = {}
-
-        for link in links:
-            try:
-                href = await link.get_attribute("href") or ""
-                text = (await link.inner_text()).strip()
+                await page.wait_for_selector(selector, timeout=5000)
+                filter_panel_selector = selector
+                logger.info(f"Found filter panel with selector: {selector}")
+                break
             except Exception:
                 continue
+        
+        if not filter_panel_selector:
+            logger.error(f"Filter panel not found with any selector: {filter_panel_selectors}")
+            return
 
-            model_match = re.search(
-                r"(model-f\d+,[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-v-?\d+)", href
-            )
-            if model_match and text:
-                slug = model_match.group(1)
-                key = _normalize_filter_name(text)
-                if key:
-                    models[key] = slug
-                    logger.debug("  Model: %-40s → %s", key, slug)
+        # --- Extract Models ---
+        # eMAG model filters are usually in links like: /filter/model-<id>,<name>/
+        model_filters = await page.evaluate('''(selector) => {
+            const links = Array.from(document.querySelectorAll(selector + ' a[href*="model-"]'));
+            const models = new Set();
+            links.forEach(a => {
+                const href = a.href;
+                // Extract the model name from the URL (e.g., "galaxy-s25-v-13515752" -> "Galaxy S25")
+                const match = href.match(/model-[^,]+,([^/]+)/);
+                if (match) {
+                    const modelName = match[1]
+                        .replace(/-/g, ' ')
+                        .replace('v ', '')  // Remove "v" prefix if present (e.g., "v-13515752")
+                        .trim();
+                    models.add(modelName);
+                }
+            });
+            return Array.from(models);
+        }''', filter_panel_selector)
 
-            storage_match = re.search(
-                r"(memorie-interna-f\d+,[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-v\d+)", href
-            )
-            if storage_match and text:
-                slug = storage_match.group(1)
-                key = _normalize_storage(text)
-                if key:
-                    storage[key] = slug
-                    logger.debug("  Storage: %-40s → %s", key, slug)
+        logger.info(f"Found {len(model_filters)} models: {model_filters[:3]}..." if len(model_filters) > 3 else f"Found {len(model_filters)} models: {model_filters}")
 
-        if models or storage:
-            self._data = {"models": models, "storage": storage}
-            self.save()
-        else:
-            logger.warning(
-                "Discovery found 0 slugs — eMAG page structure may have changed.\n"
-                "Run diagnose_emag.py and inspect the filter sidebar HTML."
-            )
+        # Clean and store models
+        self._data["models"] = {}
+        for model in model_filters:
+            # Normalize model name (e.g., "Galaxy S25" -> "Samsung Galaxy S25")
+            if not model.lower().startswith("samsung"):
+                model = f"Samsung {model}"
+            # Generate a filter key (e.g., "model-f9396,galaxy-s25-v-13515752")
+            filter_key = f"model-{model.lower().replace(' ', '-')}"
+            self._data["models"][model] = filter_key
+
+        # --- Extract Storage Options ---
+        # eMAG storage filters are usually in links like: /filter/memorie-interna-<id>,<name>/
+        storage_filters = await page.evaluate('''(selector) => {
+            const links = Array.from(document.querySelectorAll(selector + ' a[href*="memorie-interna-"]'));
+            const storageOptions = new Set();
+            links.forEach(a => {
+                const href = a.href;
+                // Extract the storage name (e.g., "128-gb-v30056" -> "128GB")
+                const match = href.match(/memorie-interna-[^,]+,([^/]+)/);
+                if (match) {
+                    let storage = match[1]
+                        .replace(/-/g, ' ')
+                        .replace('gb', 'GB')
+                        .replace('tb', 'TB')
+                        .trim();
+                    // Remove "v" suffix if present (e.g., "128 GB v30056" -> "128 GB")
+                    storage = storage.split(' ')[0];
+                    storageOptions.add(storage);
+                }
+            });
+            return Array.from(storageOptions);
+        }''', filter_panel_selector)
+
+        logger.info(f"Found {len(storage_filters)} storage options: {storage_filters}")
+
+        # Clean and store storage options
+        self._data["storage"] = {}
+        for storage in storage_filters:
+            filter_key = f"memorie-interna-{storage.lower().replace(' ', '-')}"
+            self._data["storage"][storage] = filter_key
+
+        # Save to cache
+        self._save()
+        logger.info(f"Discovered {len(self._data['models'])} models and {len(self._data['storage'])} storage options.")
 
     # ── Lookup ────────────────────────────────────────────────────────
 
@@ -409,7 +438,11 @@ async def main() -> None:
     force_rediscover = "--rediscover" in args
     discover_only = "--discover-only" in args
     json_args = [a for a in args if not a.startswith("--")]
-    json_path = Path(json_args[0]) if json_args else Path("data.json")
+    if json_args:
+        json_path = Path(json_args[0])
+    else:
+        # Go up from root/scraper/ to root/, then down to frontend/data.json
+        json_path = Path(__file__).parent.parent / "frontend" / "data.json"
 
     crawler = EmagCrawlerV2(
         headless=True,

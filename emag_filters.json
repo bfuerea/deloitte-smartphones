@@ -1,0 +1,27 @@
+{
+  "models": {
+    "Samsung galaxy a17 13774546": "model-samsung-galaxy-a17-13774546",
+    "Samsung galaxy s25 13515752": "model-samsung-galaxy-s25-13515752",
+    "Samsung galaxy s25 ultra 13515755": "model-samsung-galaxy-s25-ultra-13515755",
+    "Samsung galaxy a36 13568311": "model-samsung-galaxy-a36-13568311",
+    "Samsung galaxy a06 13409256": "model-samsung-galaxy-a06-13409256",
+    "Samsung galaxy a57 14987121": "model-samsung-galaxy-a57-14987121",
+    "Samsung galaxy a37 14987120": "model-samsung-galaxy-a37-14987120",
+    "Samsung galaxy s26 ultra 14963103": "model-samsung-galaxy-s26-ultra-14963103",
+    "Samsung galaxy a56 13568310": "model-samsung-galaxy-a56-13568310",
+    "Samsung galaxy s25 fe 13824292": "model-samsung-galaxy-s25-fe-13824292",
+    "Samsung galaxy s26 14963101": "model-samsung-galaxy-s26-14963101",
+    "Samsung galaxy s25 plus 13515753": "model-samsung-galaxy-s25-plus-13515753",
+    "Samsung galaxy s26 plus 14963102": "model-samsung-galaxy-s26-plus-14963102",
+    "Samsung galaxy z fold7 13694747": "model-samsung-galaxy-z-fold7-13694747",
+    "Samsung galaxy a07 13826012": "model-samsung-galaxy-a07-13826012"
+  },
+  "storage": {
+    "sub": "memorie-interna-sub",
+    "64": "memorie-interna-64",
+    "128": "memorie-interna-128",
+    "256": "memorie-interna-256",
+    "512": "memorie-interna-512",
+    "1": "memorie-interna-1"
+  }
+}

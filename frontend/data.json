@@ -39,13 +39,13 @@
             "Currency": "EUR"
         },
         {
-            "Model": "S26 PLUS",
+            "Model": "Samsung S26+",
             "Storage": "256GB",
             "Deloitte_Price": 1059.09,
             "Currency": "EUR"
         },
         {
-            "Model": "S26 Ultra",
+            "Model": "Samsung S26 Ultra",
             "Storage": "512GB",
             "Deloitte_Price": 1362.48,
             "Currency": "EUR"
@@ -55,14 +55,13 @@
         {
             "Model": "Samsung Galaxy A26",
             "Storage": "128GB",
-            "eMAG_Price": 1063.99,
+            "eMAG_Price": 1069.35,
             "eMAG_Rating": 4.2,
             "eMAG_Variants": [
-                1063.99,
+                1069.35,
                 1100.0,
                 1199.99,
-                1199.99,
-                1547.99
+                1199.99
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
@@ -74,9 +73,9 @@
             "eMAG_Rating": 4.4,
             "eMAG_Variants": [
                 1653.5,
-                1716.75,
                 1718.71,
-                1729.99,
+                1721.99,
+                1757.99,
                 2100.0,
                 2100.0,
                 2100.0
@@ -87,13 +86,14 @@
         {
             "Model": "Samsung Galaxy A57",
             "Storage": "128GB",
-            "eMAG_Price": 2057.0,
+            "eMAG_Price": 2073.0,
             "eMAG_Rating": 4.5,
             "eMAG_Variants": [
-                2057.0,
+                2073.0,
                 2096.23,
                 2096.23,
-                2096.23
+                2096.23,
+                2913.99
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
@@ -108,13 +108,14 @@
                 2717.31,
                 2771.29,
                 3025.0,
-                3222.56,
-                3551.22,
-                3576.23,
+                3238.83,
+                3569.15,
+                3594.28,
+                3599.99,
+                3627.99,
                 3695.95,
-                3812.76,
-                4041.51,
-                4080.77
+                3832.01,
+                4101.38
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
@@ -129,7 +130,7 @@
                 2717.31,
                 2771.29,
                 3025.0,
-                3222.56
+                3238.83
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
@@ -146,16 +147,12 @@
                 4135.99,
                 4948.52,
                 4967.99,
-                5195.36,
+                5105.82,
                 5259.54,
                 5384.5,
                 5776.39,
                 5786.73,
-                5827.83,
-                5899.0,
-                5899.0,
-                6999.0,
-                6999.0
+                5827.83
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
@@ -178,8 +175,29 @@
                 5999.99,
                 6376.51,
                 6456.74,
-                6767.99,
+                6791.99,
                 6881.72
+            ],
+            "eMAG_Price_Status": "live",
+            "Currency": "RON"
+        },
+        {
+            "Model": "Samsung Galaxy S26+",
+            "Storage": "256GB",
+            "eMAG_Price": 3932.5,
+            "eMAG_Variants": [
+                3932.5,
+                4062.93,
+                4087.2,
+                4135.99,
+                4948.52,
+                4967.99,
+                5105.82,
+                5259.54,
+                5384.5,
+                5776.39,
+                5786.73,
+                5827.83
             ],
             "eMAG_Price_Status": "live",
             "Currency": "RON"
