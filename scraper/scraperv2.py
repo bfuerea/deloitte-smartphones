@@ -1,3 +1,4 @@
+
 """
 scraperv2.py — eMAG filter-based price scraper
 ───────────────────────────────────────────────
@@ -16,7 +17,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from playwright.async_api import Page, async_playwright
 
@@ -30,7 +31,6 @@ from scraper import (
 
 logger = logging.getLogger(__name__)
 
-
 # ── Filter normalisation helpers ──────────────────────────────────────────────
 
 
@@ -42,8 +42,11 @@ def _normalize_filter_name(text: str) -> str:
       'Galaxy A26 5G'     → 'galaxy a26 5g'
     """
     t = text.lower().strip()
-    t = t.replace("+", " plus")
-    t = re.sub(r"\s+", " ", t)
+    # Handle "+" → " Plus" (e.g., "Galaxy S26+" → "galaxy s26 plus")
+    t = t.replace("+", " Plus")
+    # Also handle space + "+" → " Plus" (for consistency)
+    t = t.replace(" Plus", " Plus")  # Redundant but safe
+    t = re.sub(r"\s+", " ", t)  # Normalize multiple spaces
     return t.strip()
 
 
@@ -55,9 +58,6 @@ def _normalize_storage(text: str) -> str:
     t = text.lower().strip()
     t = re.sub(r"\s*\(.*?\)\s*", "", t)
     return re.sub(r"\s+", "", t)
-
-
-# ── FilterCatalog ─────────────────────────────────────────────────────────────
 
 
 class FilterCatalog:
@@ -75,8 +75,6 @@ class FilterCatalog:
         self.cache_path = cache_path
         self._data = {"models": {}, "storage": {}}
         self._load()
-
-    # ── Persistence ───────────────────────────────────────────────────
 
     def _load(self) -> bool:
         """Load filter catalog from disk cache."""
@@ -117,8 +115,6 @@ class FilterCatalog:
         """Check if catalog has no models or storage options."""
         return not self._data.get("models") and not self._data.get("storage")
 
-    # ── Discovery ─────────────────────────────────────────────────────
-
     async def discover(self, page):
         """
         Populate the catalog by scraping the filter panel on eMAG's Samsung brand page.
@@ -127,7 +123,7 @@ class FilterCatalog:
         # Navigate to the Samsung brand page (all models)
         brand_url = "https://www.emag.ro/telefoane-mobile/brand/samsung/c"
         await page.goto(brand_url, wait_until="domcontentloaded")
-        await asyncio.sleep(2)  # Give page extra time to settle
+        await asyncio.sleep(2)
         logger.info(f"Navigated to {brand_url}")
 
         # Wait for the filter panel to load (try multiple selectors)
@@ -151,18 +147,17 @@ class FilterCatalog:
             return
 
         # --- Extract Models ---
-        # eMAG model filters are usually in links like: /filter/model-<id>,<name>/
         model_filters = await page.evaluate('''(selector) => {
             const links = Array.from(document.querySelectorAll(selector + ' a[href*="model-"]'));
             const models = new Set();
             links.forEach(a => {
                 const href = a.href;
-                // Extract the model name from the URL (e.g., "galaxy-s25-v-13515752" -> "Galaxy S25")
-                const match = href.match(/model-[^,]+,([^/]+)/);
+                const match = href.match(/model-(\w+),([^/]+)/);
                 if (match) {
-                    const modelName = match[1]
+                    const modelId = match[1];
+                    const modelName = match[2]
                         .replace(/-/g, ' ')
-                        .replace('v ', '')  // Remove "v" prefix if present (e.g., "v-13515752")
+                        .replace('v ', '')
                         .trim();
                     models.add(modelName);
                 }
@@ -172,24 +167,19 @@ class FilterCatalog:
 
         logger.info(f"Found {len(model_filters)} models: {model_filters[:3]}..." if len(model_filters) > 3 else f"Found {len(model_filters)} models: {model_filters}")
 
-        # Clean and store models
         self._data["models"] = {}
         for model in model_filters:
-            # Normalize model name (e.g., "Galaxy S25" -> "Samsung Galaxy S25")
             if not model.lower().startswith("samsung"):
                 model = f"Samsung {model}"
-            # Generate a filter key (e.g., "model-f9396,galaxy-s25-v-13515752")
             filter_key = f"model-{model.lower().replace(' ', '-')}"
             self._data["models"][model] = filter_key
 
         # --- Extract Storage Options ---
-        # eMAG storage filters are usually in links like: /filter/memorie-interna-<id>,<name>/
         storage_filters = await page.evaluate('''(selector) => {
             const links = Array.from(document.querySelectorAll(selector + ' a[href*="memorie-interna-"]'));
             const storageOptions = new Set();
             links.forEach(a => {
                 const href = a.href;
-                // Extract the storage name (e.g., "128-gb-v30056" -> "128GB")
                 const match = href.match(/memorie-interna-[^,]+,([^/]+)/);
                 if (match) {
                     let storage = match[1]
@@ -197,7 +187,6 @@ class FilterCatalog:
                         .replace('gb', 'GB')
                         .replace('tb', 'TB')
                         .trim();
-                    // Remove "v" suffix if present (e.g., "128 GB v30056" -> "128 GB")
                     storage = storage.split(' ')[0];
                     storageOptions.add(storage);
                 }
@@ -207,25 +196,18 @@ class FilterCatalog:
 
         logger.info(f"Found {len(storage_filters)} storage options: {storage_filters}")
 
-        # Clean and store storage options
         self._data["storage"] = {}
         for storage in storage_filters:
             filter_key = f"memorie-interna-{storage.lower().replace(' ', '-')}"
             self._data["storage"][storage] = filter_key
 
-        # Save to cache
         self._save()
         logger.info(f"Discovered {len(self._data['models'])} models and {len(self._data['storage'])} storage options.")
-
-    # ── Lookup ────────────────────────────────────────────────────────
 
     def get_model_slug(self, model: str) -> Optional[str]:
         """
         Resolve a Deloitte model name to an eMAG filter slug.
-        Matching priority:
-          1. Exact normalised key match
-          2. Token subset scoring (matches catalog key that is a perfect subset
-             of query tokens, preferring the longest match to avoid S26 matching S26 Plus).
+        Returns the full filter key: "model-f9396,galaxy-s26-plus-v-14963102"
         """
         key = _normalize_filter_name(normalize_model(model))
         key = re.sub(r"^samsung\s+", "", key).strip()
@@ -234,7 +216,6 @@ class FilterCatalog:
         if key in catalog:
             return catalog[key]
 
-        # Token-based match
         query_tokens = set(re.findall(r"[a-z0-9]+", key))
         ignore_words = {"samsung", "galaxy", "telefon", "mobil", "phone", "5g", "4g"}
         query_tokens -= ignore_words
@@ -246,9 +227,12 @@ class FilterCatalog:
         best_score = -1
 
         for cat_key, slug in catalog.items():
-            cat_tokens = set(re.findall(r"[a-z0-9]+", cat_key)) - ignore_words
+            parts = slug.split(',', 1)
+            if len(parts) != 2:
+                continue
+            cat_name = parts[1]
+            cat_tokens = set(re.findall(r"[a-z0-9]+", cat_name)) - ignore_words
             
-            # The catalog model's tokens must ALL be present in our query
             if cat_tokens and cat_tokens.issubset(query_tokens):
                 score = len(cat_tokens)
                 if score > best_score:
@@ -273,16 +257,13 @@ class FilterCatalog:
         return None
 
     def debug_dump(self) -> None:
-        """Print the full catalog to stdout — useful during development."""
+        """Print the full catalog to stdout."""
         print("\n── Models ──────────────────────────────────────────────────")
         for k, v in sorted(self._data.get("models", {}).items()):
             print(f"  {k:<45} {v}")
         print("\n── Storage ─────────────────────────────────────────────────")
         for k, v in sorted(self._data.get("storage", {}).items()):
             print(f"  {k:<45} {v}")
-
-
-# ── EmagCrawlerV2 ─────────────────────────────────────────────────────────────
 
 
 class EmagCrawlerV2(EmagCrawler):
@@ -305,20 +286,26 @@ class EmagCrawlerV2(EmagCrawler):
             self.catalog.load()
         self._catalog_ready = not self.catalog.is_empty() and not force_rediscover
 
-    # ── URL builder ───────────────────────────────────────────────────
+    def _extract_model_filter_info(self, href: str) -> Optional[Tuple[str, str]]:
+        """
+        Extract (model_id, model_name) from eMAG filter URL.
+        Example: "model-f9396,galaxy-s26-plus-v-14963102" -> ("f9396", "galaxy-s26-plus-v-14963102")
+        """
+        match = re.search(r'model-(\w+),([^/]+)', href)
+        if match:
+            return (match.group(1), match.group(2))
+        return None
 
-    def _build_filtered_url(self, model_slug: str, storage_slug: str) -> str:
+    def _build_filtered_url(self, model_filter_key: str, storage_slug: str) -> str:
         """
         Build the exact filter URL that eMAG's UI would produce.
-        We omit the text query path segment to ensure eMAG strictly respects the filters.
+        model_filter_key format: "model-f9396,galaxy-s26-plus-v-14963102"
         """
+        model_name_part = model_filter_key.split(',', 1)[1] if ',' in model_filter_key else model_filter_key
+        
         return (
-            f"{self.BASE_SEARCH}"
-            f"/filter/{model_slug}/{storage_slug}"
-            f"/sort-priceasc/c"
+            f"{self.BASE_SEARCH}/filter/{model_name_part}/{storage_slug}/c"
         )
-
-    # ── Core search method (overrides parent) ─────────────────────────
 
     async def search_min_price(
         self, model: str, storage: str, page: Page
@@ -332,25 +319,25 @@ class EmagCrawlerV2(EmagCrawler):
         """
 
         if not self._catalog_ready:
-            logger.info("Filter catalog not ready — running discovery...")
+            logger.info("Filter catalog not ready — running discovery. ..")
             await self.catalog.discover(page)
             self._catalog_ready = True
 
-        model_slug = self.catalog.get_model_slug(model)
+        model_filter_key = self.catalog.get_model_slug(model)
         storage_slug = self.catalog.get_storage_slug(storage)
 
-        if not model_slug or not storage_slug:
+        if not model_filter_key or not storage_slug:
             logger.warning(
                 "⚠ Slug resolution failed for '%s %s' "
-                "(model_slug=%s, storage_slug=%s) — falling back to v1 keyword search",
+                "(model_filter_key=%s, storage_slug=%s) — falling back to v1 keyword search",
                 model,
                 storage,
-                model_slug,
+                model_filter_key,
                 storage_slug,
             )
             return await super().search_min_price(model, storage, page)
 
-        url = self._build_filtered_url(model_slug, storage_slug)
+        url = self._build_filtered_url(model_filter_key, storage_slug)
         logger.info("Filter URL → %s", url)
 
         try:
@@ -416,8 +403,6 @@ class EmagCrawlerV2(EmagCrawler):
                 model=model, storage=storage, min_price=None, status=f"Error: {e}"
             )
 
-    # ── Public helpers ────────────────────────────────────────────────
-
     async def rediscover_filters(self) -> None:
         """Force-refresh the filter catalog (call when eMAG adds new models)."""
         async with async_playwright() as p:
@@ -426,9 +411,6 @@ class EmagCrawlerV2(EmagCrawler):
             await self.catalog.discover(page)
             await browser.close()
         self._catalog_ready = True
-
-
-# ── CLI ───────────────────────────────────────────────────────────────────────
 
 
 async def main() -> None:
@@ -441,7 +423,6 @@ async def main() -> None:
     if json_args:
         json_path = Path(json_args[0])
     else:
-        # Go up from root/scraper/ to root/, then down to frontend/data.json
         json_path = Path(__file__).parent.parent / "frontend" / "data.json"
 
     crawler = EmagCrawlerV2(
@@ -457,7 +438,7 @@ async def main() -> None:
         return
 
     if crawler.catalog.is_empty():
-        print("Filter catalog empty — discovering now (one-time, cached afterwards)...")
+        print("Filter catalog empty — discovering now (one-time, cached afterwards). ..")
         await crawler.rediscover_filters()
 
     if not json_path.exists():

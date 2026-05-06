@@ -1,27 +1,27 @@
 {
   "models": {
-    "Samsung galaxy a17 13774546": "model-samsung-galaxy-a17-13774546",
-    "Samsung galaxy s25 13515752": "model-samsung-galaxy-s25-13515752",
-    "Samsung galaxy s25 ultra 13515755": "model-samsung-galaxy-s25-ultra-13515755",
-    "Samsung galaxy a36 13568311": "model-samsung-galaxy-a36-13568311",
-    "Samsung galaxy a06 13409256": "model-samsung-galaxy-a06-13409256",
-    "Samsung galaxy a57 14987121": "model-samsung-galaxy-a57-14987121",
-    "Samsung galaxy a37 14987120": "model-samsung-galaxy-a37-14987120",
-    "Samsung galaxy s26 ultra 14963103": "model-samsung-galaxy-s26-ultra-14963103",
-    "Samsung galaxy a56 13568310": "model-samsung-galaxy-a56-13568310",
-    "Samsung galaxy s25 fe 13824292": "model-samsung-galaxy-s25-fe-13824292",
-    "Samsung galaxy s26 14963101": "model-samsung-galaxy-s26-14963101",
-    "Samsung galaxy s25 plus 13515753": "model-samsung-galaxy-s25-plus-13515753",
-    "Samsung galaxy s26 plus 14963102": "model-samsung-galaxy-s26-plus-14963102",
-    "Samsung galaxy z fold7 13694747": "model-samsung-galaxy-z-fold7-13694747",
-    "Samsung galaxy a07 13826012": "model-samsung-galaxy-a07-13826012"
+    "galaxy a17": "model-f9396,galaxy-a17-v-13774546",
+    "galaxy s25": "model-f9396,galaxy-s25-v-13515752",
+    "galaxy s25 ultra": "model-f9396,galaxy-s25-ultra-v-13515755",
+    "galaxy a36": "model-f9396,galaxy-a36-v-13568311",
+    "galaxy a06": "model-f9396,galaxy-a06-v-13409256",
+    "galaxy a57": "model-f9396,galaxy-a57-v-14987121",
+    "galaxy a37": "model-f9396,galaxy-a37-v-14987120",
+    "galaxy s26 ultra": "model-f9396,galaxy-s26-ultra-v-14963103",
+    "galaxy a56": "model-f9396,galaxy-a56-v-13568310",
+    "galaxy s25 fe": "model-f9396,galaxy-s25-fe-v-13824292",
+    "galaxy s26": "model-f9396,galaxy-s26-v-14963101",
+    "galaxy s25 plus": "model-f9396,galaxy-s25-plus-v-13515753",
+    "galaxy s26 plus": "model-f9396,galaxy-s26-plus-v-14963102",
+    "galaxy z fold7": "model-f9396,galaxy-z-fold7-v-13694747",
+    "galaxy a07": "model-f9396,galaxy-a07-v-13826012"
   },
   "storage": {
-    "sub": "memorie-interna-sub",
-    "64": "memorie-interna-64",
-    "128": "memorie-interna-128",
-    "256": "memorie-interna-256",
-    "512": "memorie-interna-512",
-    "1": "memorie-interna-1"
+    "sub32gb": "memorie-interna-f9441,sub-32-gb-v30053",
+    "64gb": "memorie-interna-f9441,64-gb-v30055",
+    "128gb": "memorie-interna-f9441,128-gb-v30056",
+    "256gb": "memorie-interna-f9441,256-gb-v30057",
+    "512gb": "memorie-interna-f9441,512-gb-v31226",
+    "1tb": "memorie-interna-f9441,1-tb-v31227"
   }
 }
