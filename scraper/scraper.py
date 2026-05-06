@@ -340,6 +340,7 @@ class EmagCrawler:
                         emag_data[idx]["eMAG_Price_Status"] = "live"
                     else:
                         emag_data[idx]["eMAG_Price_Status"] = result.status
+                    emag_data[idx]["Currency"] = "RON"
                 else:
                     # New entry — not previously in emagData
                     new_entry: dict = {
@@ -352,6 +353,7 @@ class EmagCrawler:
                         new_entry["eMAG_Price_Status"] = "live"
                     else:
                         new_entry["eMAG_Price_Status"] = result.status
+                    new_entry["Currency"] = "RON"
                     emag_data.append(new_entry)
                     emag_index[k] = len(emag_data) - 1
 

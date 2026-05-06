@@ -19,9 +19,10 @@
                     <tr>
                         <th>Model</th>
                         <th>Storage</th>
-                        <th>Deloitte Price</th>
-                        <th>Out of Pocket</th>
-                        <th>eMAG Price</th>
+                        <th>Deloitte Price (EUR)</th>
+                        <th>Out of Pocket (EUR)</th>
+                        <th>eMAG Price (RON)</th>
+                        <th>eMAG Price (EUR)</th>
                         <th>Rating</th>
                     </tr>
                 </thead>
@@ -59,7 +60,8 @@
                         <td>${row.Storage}</td>
                         <td>€${row.Deloitte_Price}</td>
                         <td><strong>€${row.Out_of_Pocket}</strong></td>
-                        <td>€${row.eMAG_Price || 'N/A'}</td>
+                        <td>${row.eMAG_Price_RON ? `RON ${row.eMAG_Price_RON.toFixed(2)}` : 'N/A'}</td>
+                        <td>${row.eMAG_Price ? `€${row.eMAG_Price}` : 'N/A'}</td>
                         <td>⭐ ${row.eMAG_Rating || 'N/A'}</td>
                     `;
                     tbody.appendChild(tr);

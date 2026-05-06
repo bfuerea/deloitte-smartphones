@@ -17,12 +17,13 @@ async def crawler():
 def sample_json(tmp_path) -> Path:
     data = {
         "subsidy": 271.0,
+        "currency": "EUR",
         "deloitteData": [
-            {"Model": "Samsung A26", "Storage": "128GB", "Deloitte_Price": 220.14},
-            {"Model": "S26 Ultra",   "Storage": "512GB", "Deloitte_Price": 1362.48},
+            {"Model": "Samsung A26", "Storage": "128GB", "Deloitte_Price": 220.14, "Currency": "EUR"},
+            {"Model": "S26 Ultra",   "Storage": "512GB", "Deloitte_Price": 1362.48, "Currency": "EUR"},
         ],
         "emagData": [
-            {"Model": "Samsung Galaxy A26", "Storage": "128GB", "eMAG_Price": 199.99, "eMAG_Rating": 4.2},
+            {"Model": "Samsung Galaxy A26", "Storage": "128GB", "eMAG_Price": 199.99, "eMAG_Rating": 4.2, "Currency": "RON"},
         ]
     }
     p = tmp_path / "data.json"
