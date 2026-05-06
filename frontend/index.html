@@ -5,26 +5,178 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deloitte Phone Subsidy Dashboard</title>
+    
+    <!-- CSS Variables for Themes -->
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        .subsidy-box { font-size: 1.3rem; text-align: center; margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px; color: #0056b3; border: 1px solid #b6d4fe; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: 600; }
-        tr:nth-child(even) { background-color: #fafafa; }
-        .chart-container { margin-top: 40px; position: relative; height: 400px; }
-        .controls { text-align: center; margin-top: 20px; }
-        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #0056b3; }
+        :root {
+            /* Light Theme (Default) */
+            --bg-body: #f8f9fa;
+            --bg-container: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #555555;
+            --border-color: #e0e0e0;
+            --accent-color: #007bff;
+            --accent-hover: #0056b3;
+            --box-bg: #e7f3ff;
+            --box-border: #b6d4fe;
+            --table-header-bg: #f2f2f2;
+            --table-row-alt: #fafafa;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme */
+            --bg-body: #1a1a1a;
+            --bg-container: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #cccccc;
+            --border-color: #444444;
+            --accent-color: #4dabf7;
+            --accent-hover: #1e88e5;
+            --box-bg: #003a5c;
+            --box-border: #0056b3;
+            --table-header-bg: #3d3d3d;
+            --table-row-alt: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            background: var(--bg-container);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-primary);
+            margin-top: 0;
+        }
+
+        .subsidy-box {
+            font-size: 1.3rem;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--box-bg);
+            border-radius: 8px;
+            color: var(--accent-color);
+            border: 1px solid var(--box-border);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--table-header-bg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--table-row-alt);
+        }
+
+        .chart-container {
+            margin-top: 40px;
+            position: relative;
+            height: 400px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            cursor: pointer;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Toggle Switch Styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-left: 15px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* Dark Mode Chart Support */
+        body[data-theme="dark"] canvas {
+            background-color: var(--bg-container) !important;
+        }
     </style>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="logic.js"></script>
 </head>
 <body>
     <main class="container">
         <h1>📱 Deloitte Phone Subsidy Dashboard</h1>
+        
+        <!-- Dark Mode Toggle -->
+        <div class="controls" style="margin-bottom: 20px;">
+            <label>Dark Mode</label>
+            <label class="switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
         <div class="subsidy-box">
             <strong id="subsidy-label">Annual Subsidy:</strong> <span id="subsidy-amount">Loading...</span>
         </div>
@@ -59,6 +211,43 @@
         let globalData; 
         let myChart = null;
         const RATE = 5.27;
+        let isDarkMode = false;
+
+        // Initialize Theme
+        const toggle = document.getElementById('darkModeToggle');
+        if (localStorage.getItem('theme') === 'dark') {
+            isDarkMode = true;
+            document.body.setAttribute('data-theme', 'dark');
+            toggle.checked = true;
+        }
+
+        function updateChartTheme() {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            // Destroy chart to force re-render with new theme context
+            if (myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: getChartData(globalData.deloitteData, globalData.currency),
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') },
+                            grid: { color: getComputedStyle(document.body).getPropertyValue('--border-color') }
+                        },
+                        x: { 
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') }
+                        }
+                    }
+                }
+            });
+        }
 
         function renderDashboard() {
             // 1. UPDATE SUBSIDY AMOUNT AT TOP
@@ -90,23 +279,7 @@
             });
 
             // 4. RENDER CHART
-            const ctx = document.getElementById('costChart').getContext('2d');
-            if (myChart) myChart.destroy();
-            
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: getChartData(processedData, globalData.currency),
-                options: { 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: `Price Comparison: Your Actual Cost vs eMAG (${globalData.currency})` }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: `Amount in ${globalData.currency}` } }
-                    }
-                }
-            });
+            updateChartTheme();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -127,6 +300,17 @@
         document.getElementById('currencySwitch').addEventListener('click', () => {
             globalData.currency = globalData.currency === 'RON' ? 'EUR' : 'RON';
             renderDashboard();
+        });
+
+        // Dark Mode Toggle Logic
+        toggle.addEventListener('change', (e) => {
+            isDarkMode = e.target.checked;
+            if (isDarkMode) {
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+            updateChartTheme();
         });
 
         function getChartData(data, currency) {
