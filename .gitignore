@@ -30,3 +30,6 @@ data.json.swp
 # IDE and Editor files
 .vscode/
 *.swp
+
+# Ignore requirements.txt files recursively
+**/requirements.txt

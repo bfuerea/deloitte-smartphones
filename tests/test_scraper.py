@@ -3,7 +3,7 @@ import pytest
 import pytest_asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from scraper import EmagCrawler, ProductInfo, SearchResult, parse_romanian_price, normalize_model, model_keywords
+from scraper.scraper import EmagCrawler, ProductInfo, SearchResult, parse_romanian_price, normalize_model, model_keywords
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ async def test_update_json_writes_prices(crawler, sample_json):
     emag = {e["Model"].lower() + "|" + e["Storage"].lower(): e for e in updated["emagData"]}
 
     for product in updated["deloitteData"]:
-        from scraper import normalize_model
+        from scraper.scraper import normalize_model
         key = normalize_model(product["Model"]).lower() + "|" + product["Storage"].lower()
         assert key in emag, f"Missing emagData entry for {product['Model']}"
         entry = emag[key]
