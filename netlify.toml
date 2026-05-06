@@ -1,7 +1,7 @@
 [build]
   # This tells Netlify which folder to serve to the web.
   # Change "frontend" to whatever folder contains your index.html and data.json
-  publish = "frontend" 
+  publish = . 
   
   # Since you are generating the data.json locally/via Actions 
   # and pushing static files, Netlify doesn't need to run a framework build.

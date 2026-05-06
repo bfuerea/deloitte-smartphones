@@ -379,7 +379,7 @@ async def main():
     crawler = EmagCrawler(headless=True, max_retries=2, timeout_ms=10_000)
 
     # If a json path is passed, run the full update
-    json_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("data.json")
+    json_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "data.json"
     if json_path.exists():
         print(f"\nUpdating prices from: {json_path}")
         updated = await crawler.update_json_file(json_path)
