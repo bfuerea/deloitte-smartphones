@@ -1,0 +1,31 @@
+# Python files
+__pycache__/
+*.pyc
+*.pyc*.py
+*.pyo
+*.mo
+*.pot
+*.po
+*.spl
+*.swo
+*.so
+
+# Virtual environments
+venv/
+.venv/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Node.js / JavaScript
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Data files (if any should be ignored, though data.json is present)
+data.json.swp
+
+# IDE and Editor files
+.vscode/
+*.swp

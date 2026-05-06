@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deloitte Phone Subsidy vs eMAG</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="logic.js"></script>
+</head>
+<body>
+    <main class="container">
+        <h1>📱 Deloitte Phone Subsidy Dashboard</h1>
+        <p><strong>Annual Subsidy:</strong> <span id="subsidy-amount">Loading...</span></p>
+
+        <figure>
+            <table role="grid" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Storage</th>
+                        <th>Deloitte Price</th>
+                        <th>Out of Pocket</th>
+                        <th>eMAG Price</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </figure>
+
+        <article>
+            <canvas id="costChart"></canvas>
+        </article>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Fetch the external JSON data
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('Failed to load data.json');
+                const data = await response.json();
+
+                // Update UI with subsidy from JSON
+                document.getElementById('subsidy-amount').textContent = `€${data.subsidy.toFixed(2)}`;
+
+                // 1. Process Data
+                const processedData = processPhoneData(data.deloitteData, data.emagData, data.subsidy);
+
+                // 2. Render Table
+                const tbody = document.querySelector('#dataTable tbody');
+                processedData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.Model}</td>
+                        <td>${row.Storage}</td>
+                        <td>€${row.Deloitte_Price}</td>
+                        <td><strong>€${row.Out_of_Pocket}</strong></td>
+                        <td>€${row.eMAG_Price || 'N/A'}</td>
+                        <td>⭐ ${row.eMAG_Rating || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                // 3. Render Chart
+                const ctx = document.getElementById('costChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: processedData.map(d => d.Model),
+                        datasets: [
+                            {
+                                label: 'Deloitte Out-of-Pocket (€)',
+                                data: processedData.map(d => d.Out_of_Pocket),
+                                backgroundColor: '#1E88E5'
+                            },
+                            {
+                                label: 'eMAG Retail Price (€)',
+                                data: processedData.map(d => d.eMAG_Price),
+                                backgroundColor: '#E53935'
+                            }
+                        ]
+                    },
+                    options: { responsive: true }
+                });
+            } catch (error) {
+                console.error("Error loading data:", error);
+                document.getElementById('subsidy-amount').textContent = "Error loading data.json (Check CORS if running locally without a server)";
+            }
+        });
+    </script>
+</body>
+</html>
