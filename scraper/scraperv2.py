@@ -21,7 +21,7 @@ from typing import Optional
 
 from playwright.async_api import Page, async_playwright
 
-from scraper.scraper import (
+from .scraper import (
     EmagCrawler,
     ProductInfo,
     SearchResult,
